@@ -3,11 +3,14 @@ from setproctitle import setproctitle as ptitle
 import torch
 from environment import atari_env
 from utils import setup_logger
-from model import A3Clstm
+
 from player_util import Agent
 from torch.autograd import Variable
 import time
 import logging
+
+from gym_env import GymEnvironment
+
 
 
 def test(args, shared_model, env_conf):
@@ -25,17 +28,19 @@ def test(args, shared_model, env_conf):
     torch.manual_seed(args.seed)
     if gpu_id >= 0:
         torch.cuda.manual_seed(args.seed)
-    env = atari_env(args.env, env_conf, args)
+
+    env = GymEnvironment(env_name='Pong-v4')
+    action_size = env.get_action_size('Pong-v4')
+
     reward_sum = 0
     start_time = time.time()
     num_tests = 0
     reward_total_sum = 0
-    player = Agent(None, env, args, None)
+    player = Agent(model=None, env=env, action_size=action_size, args=args, state=None)
     player.gpu_id = gpu_id
-    player.model = A3Clstm(player.env.observation_space.shape[0],
-                           player.env.action_space)
+    player.model = UNREALModule(3, action_size=action_size, enable_pixel_control=True)
 
-    player.state = player.env.reset()
+    player.state = player.env.last_state
     player.eps_len += 2
     player.state = torch.from_numpy(player.state).float()
     if gpu_id >= 0:
@@ -58,7 +63,8 @@ def test(args, shared_model, env_conf):
         reward_sum += player.reward
 
         if player.done and not player.info:
-            state = player.env.reset()
+            player.env.reset()
+            state = player.env.last_state
             player.eps_len += 2
             player.state = torch.from_numpy(state).float()
             if gpu_id >= 0:
@@ -90,7 +96,8 @@ def test(args, shared_model, env_conf):
 
             reward_sum = 0
             player.eps_len = 0
-            state = player.env.reset()
+            player.env.reset()
+            state = player.env.last_state
             player.eps_len += 2
             time.sleep(10)
             player.state = torch.from_numpy(state).float()

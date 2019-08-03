@@ -2,7 +2,11 @@ from __future__ import division
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import norm_col_init, weights_init
+from torch.autograd import Variable
+from utils import norm_col_init, weights_init, normalized_columns_initializer
+
+
+
 
 
 class A3Clstm(torch.nn.Module):
@@ -54,3 +58,31 @@ class A3Clstm(torch.nn.Module):
         x = hx
 
         return self.critic_linear(x), self.actor_linear(x), (hx, cx)
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    from deepmind_env import LabEnvironment
+    from gym_env import GymEnvironment
+    import numpy as np
+    # env = LabEnvironment(env_name='nav_maze_static_01')
+    # model = UNREALModule(3, action_size=env.get_action_size('nav_maze_static_01'))
+    env = GymEnvironment(env_name='Pong-v4')
+    model = UNREALModule(3, action_size=env.get_action_size('Pong-v4'))
+    env.reset()
+    #
+    cx = Variable(torch.zeros(1, 256))
+    hx = Variable(torch.zeros(1, 256))
+    observation, reward, terminal, pixel_change = env.step(0)
+    # observation = np.transpose(observation, [2, 0, 1])
+    ls = torch.from_numpy(np.array([[0,0,0,0,0,0,0], [1,1,1,1,1,1,0]], dtype=np.float32))
+    v, pi, (hx, cx) = model(task_type='pc', states=torch.from_numpy(np.array([observation, observation.copy()])), hx=hx, cx=cx, last_action_rewards=ls)
+    print('v={0}'.format(v))
+    print('pi={0}'.format(pi))
+
+    env.close()

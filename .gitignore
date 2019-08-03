@@ -1,2 +1,8 @@
 *~
 .DS_Store
+/.idea/
+/.vscode/
+/tmp/
+__pycache__/
+/logs
+/trained_models/
